@@ -1,0 +1,210 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Live2D 测试页面</title>
+    <!-- 引入本地的 PixiJS -->
+    <script src="/static/js/pixi.min.js"></script>
+    <!-- 引入本地的 Cubism Core 和 Live2D SDK -->
+    <script src="/static/js/live2dcubismcore.min.js"></script>
+    <script src="/static/js/live2d.min.js"></script>
+    <!-- 引入本地的 pixi-live2d-display -->
+    <script src="/static/js/index.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: transparent; /* 设置为透明 */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background-color: transparent; /* 设置为透明 */
+        }
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: none; /* 默认隐藏，等待加载完成后显示 */
+        }
+        #loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: black;
+            font-size: 24px;
+            display: block; /* 初始显示 */
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <div id="loading-indicator">加载中...</div>
+        <canvas id="canvas" data-model-url="{{ model_url }}"></canvas>
+    </div>
+
+    <script>
+        // 将 PIXI 暴露到 window 上，这样插件可以自动更新模型
+        window.PIXI = PIXI;
+
+        // 全局 PixiJS 应用实例
+        let app = null;
+
+        // WebSocket 客户端
+        let socket = null;
+
+        // 初始加载模型
+        document.addEventListener("DOMContentLoaded", function() {
+            const modelUrl = "{{ model_url }}";
+            if (modelUrl) {
+                loadModel(modelUrl);
+            }
+            initWebSocket();
+        });
+
+        function initWebSocket() {
+            // 建立 WebSocket 连接
+            socket = new WebSocket(`ws://${window.location.host}/ws`);
+
+            socket.onopen = function(event) {
+                console.log("WebSocket 连接已打开。");
+            };
+
+            socket.onmessage = function(event) {
+                console.log("收到消息:", event.data);
+                if (event.data.startsWith("set_expression:")) {
+                    const expressionName = event.data.split(":")[1];
+                    setExpression(expressionName);
+                }else if (event.data.startsWith("play_audio:")) {
+                    const fileUrl = event.data.split(":")[1];
+                    playAudio(fileUrl);
+                }
+                
+            };
+
+            socket.onclose = function(event) {
+                console.log("WebSocket 连接已关闭。尝试重新连接...");
+                setTimeout(initWebSocket, 5000); // 5秒后重连
+            };
+
+            socket.onerror = function(error) {
+                console.error("WebSocket 错误:", error);
+                socket.close();
+            };
+        }
+
+        function setExpression(expressionName) {
+            if (window.model && window.model.internalModel && window.model.internalModel.motionManager && window.model.internalModel.motionManager.expressionManager) {
+                try {
+                    // 调用 Live2D SDK 的表情设置方法
+                    window.model.internalModel.motionManager.expressionManager.setExpression(expressionName);
+                    console.log(`${expressionName} 表情已设置。`);
+                } catch (error) {
+                    console.error("设置表情失败:", error);
+                }
+            } else {
+                console.warn("模型或表情管理器未准备好。");
+            }
+        }
+
+        function playAudio(fileUrl) {
+            console.log(`正在播放音频: ${fileUrl}`);
+            model.speak(fileUrl);
+
+        }
+
+
+        function loadModel(modelUrl) {
+            const canvas = document.getElementById('canvas');
+            const loadingIndicator = document.getElementById('loading-indicator');
+
+            // 显示加载指示器并隐藏 Canvas
+            loadingIndicator.style.display = 'block';
+            canvas.style.display = 'none';
+
+            if (!app) {
+                // 如果 PixiJS 应用尚未初始化，则初始化
+                app = new PIXI.Application({
+                    view: canvas,
+                    autoStart: true,
+                    backgroundAlpha: 0, // 确保背景透明
+                    resizeTo: window,    // 自动调整大小
+                });
+            } else {
+                // 清之前的舞台
+                app.stage.removeChildren();
+            }
+
+            try {
+                // 使用 PixiJS 的 Loader 预加载模型和相关资源
+                PIXI.live2d.Live2DModel.from(modelUrl).then(model => {
+                    // 设置模型位置和缩放
+                    setModelSizeAndPosition(model, app);
+
+                    // 添加到舞台
+                    app.stage.addChild(model);
+                    window.model = model;
+
+                    // 隐藏加载指示器并显示 Canvas
+                    loadingIndicator.style.display = 'none';
+                    canvas.style.display = 'block';
+
+                    // 绑定 hit 事件
+                    model.on("hit", (hitAreas) => {
+                        if (hitAreas.includes("body")) {
+                            model.motion("tap_body");
+                        }
+
+                        if (hitAreas.includes("head")) {
+                            model.expression();
+                        }
+                    });
+
+                }).catch(error => {
+                    console.error("加载模型失败:", error);
+                    // 显示错误信息
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.position = 'absolute';
+                    errorDiv.style.top = '10px';
+                    errorDiv.style.left = '50%';
+                    errorDiv.style.transform = 'translateX(-50%)';
+                    errorDiv.style.padding = '10px 20px';
+                    errorDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+                    errorDiv.style.color = 'white';
+                    errorDiv.style.borderRadius = '5px';
+                    errorDiv.innerText = '模型加载失败，请检查控制台以获取详细信息。';
+                    document.getElementById('canvas-container').appendChild(errorDiv);
+
+                    // 隐藏加载指示器
+                    loadingIndicator.style.display = 'none';
+                });
+            } catch (error) {
+                console.error("加载模型失败:", error);
+                // 隐藏加载指示器
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        // 封装设置模型位置和缩放的函数
+        function setModelSizeAndPosition(model, app) {
+            // 计算缩放比例，确保模型填满整个屏幕
+            const scaleX = window.innerWidth / model.width;
+            const scaleY = window.innerHeight / model.height;
+
+            // 选择较大的缩放比例以确保模型不被裁剪
+            model.scale.set(Math.min(scaleX, scaleY));
+
+            // 设置模型的垂直居中位置
+            model.y = (window.innerHeight - model.height ) / 2;
+
+            // 设置模型的水平居中位置
+            model.x = (window.innerWidth - model.width) / 2;
+        }
+    </script>
+</body>
+</html>
