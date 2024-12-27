@@ -14,6 +14,8 @@ from fastapi_standalone_docs import StandaloneDocs
 import logging
 from pydantic import BaseModel
 import requests
+import openai
+
 
 app = FastAPI()
 StandaloneDocs(app=app)
@@ -180,8 +182,24 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-    
+openai_client = openai.OpenAI(
+                api_key="aaa",
+                base_url='http://192.10.50.139:11434/v1/',
+            )    
     
 
-
+@app.post("/llm_interact")
+async def llm_interact(user_input: str):
+    response = openai_client.chat.completions.create(
+        model="qwen2.5:32b",
+        messages=[
+            {"role": "system", "content": "你是一个AI助手，请根据用户输入生成回复。"},
+            {"role": "user", "content": user_input},
+        ],
+        temperature=0.7,
+    )
+    llm_output = response.choices[0].message.content
+    print(f"llm_output: {llm_output}")
+    await tts(llm_output)
+    return JSONResponse(content={"message": response.choices[0].message.content})
 
