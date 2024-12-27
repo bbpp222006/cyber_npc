@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  fish-speech:
+    image: fishaudio/fish-speech:latest-dev
+    container_name: fish-speech
+    command: zsh
+    volumes:
+      - ./data:/opt/fish-speech/data
+      - ./checkpoints:/opt/fish-speech/checkpoints
+    ports:
+      - "7860:8080"
+    deploy:
+      resources:
+        limits:
+          devices:
+            - driver: nvidia
+              count: all
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all

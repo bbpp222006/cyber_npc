@@ -1,5 +1,7 @@
 # app.py
 from enum import Enum
+import random
+import string
 from typing import List
 from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect, Request
 from fastapi.staticfiles import StaticFiles
@@ -8,8 +10,10 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from fastapi_standalone_docs import StandaloneDocs
-
+# logger
+import logging
 from pydantic import BaseModel
+import requests
 
 app = FastAPI()
 StandaloneDocs(app=app)
@@ -27,6 +31,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 设置模板目录
 templates = Jinja2Templates(directory="templates")
+logger = logging.getLogger(__name__)
 
 # 定义一个类来管理 WebSocket 连接
 class ConnectionManager:
@@ -73,16 +78,24 @@ async def trigger_expression(expression: ExpressionNameModel):
     await manager.broadcast(f"set_expression:{expression_name}")
     return JSONResponse(content={"message": f"表情 {expression_name} 已触发。"})
 
+# 文件上传接口
 @app.post("/upload_audio")
 async def upload_audio(file: UploadFile = File(...)):
     # 检查文件类型是否为音频
     if not file.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="仅支持音频文件上传。")
 
-    # 生成唯一的文件名以避免冲突
+    # 生成随机的唯一文件名，文件名以 audio_ 开头
     file_extension = os.path.splitext(file.filename)[1]
-    unique_filename = f"tmp{file_extension}"
+    unique_filename = f"audio_{random_string(8)}{file_extension}"
     file_path = os.path.join("static/uploads", unique_filename)
+
+    # 删除旧的文件（如果存在）
+    old_files = os.listdir("static/uploads")
+    for old_file in old_files:
+        old_file_path = os.path.join("static/uploads", old_file)
+        if os.path.isfile(old_file_path):
+            os.remove(old_file_path)
 
     # 保存文件
     with open(file_path, "wb") as buffer:
@@ -95,6 +108,52 @@ async def upload_audio(file: UploadFile = File(...)):
     await manager.broadcast(f"play_audio:{file_url}")
     return JSONResponse(content={"message": "音频文件已上传并触发播放。", "file_url": file_url})
 
+# 生成随机字符串（用于生成唯一的文件名）
+def random_string(length: int):
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+# 获取 TTS 文件接口
+def get_tts_file(text: str):
+    # 删除旧的文件（如果存在）
+    old_files = os.listdir("static/uploads")
+    for old_file in old_files:
+        old_file_path = os.path.join("static/uploads", old_file)
+        if os.path.isfile(old_file_path):
+            os.remove(old_file_path)
+
+    url = "http://192.10.221.53:30004/run-inference"
+    payload = {
+        "target_text_content": text
+    }
+
+    headers = {
+        "Content-Type": "application/json"
+    } 
+    logger.info(f"请求tts: {payload}")
+    response = requests.post(url, json=payload, headers=headers)
+
+    if response.status_code == 200:
+        # 生成随机的唯一文件名，文件名以 audio_ 开头
+        unique_filename = f"audio_{random_string(8)}.wav"
+        file_path = os.path.join("static/uploads", unique_filename)
+        with open(file_path, "wb") as f:
+            f.write(response.content)
+        return file_path
+    else:
+        return None
+    
+@app.post("/tts")
+async def tts(text: str):
+    # 检查文件类型是否为音频
+    file_path = get_tts_file(text)
+    if file_path is None:
+        raise HTTPException(status_code=400, detail="生成音频文件失败。")
+
+
+    # 向所有 WebSocket 客户端广播，携带音频文件的 URL
+    await manager.broadcast(f"play_audio:{file_path}")
+
+    return JSONResponse(content={"message": "tts触发播放。", "text": text})
 
 @app.get("/list_expression")
 async def list_expression():
