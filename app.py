@@ -15,6 +15,7 @@ import logging
 from pydantic import BaseModel
 import requests
 import openai
+import uvicorn
 
 
 app = FastAPI()
@@ -203,3 +204,5 @@ async def llm_interact(user_input: str):
     await tts(llm_output)
     return JSONResponse(content={"message": response.choices[0].message.content})
 
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=38024)
