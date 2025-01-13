@@ -1,0 +1,16 @@
+/* src/styles/SubtitlesPage.module.css */
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: transparent; /* 设置背景为透明 */
+    color: #fff; /* 字体颜色 */
+  }
+  
+  .title {
+    margin-bottom: 20px;
+  }
+  

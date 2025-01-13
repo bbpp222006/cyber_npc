@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  fish-speech:
+    image: fishaudio/fish-speech:latest-dev
+    container_name: fish-speech
+    command: python fastapi_main.py
+    volumes:
+      - ./data:/opt/fish-speech/data
+      - ./fastapi_main.py:/opt/fish-speech/fastapi_main.py
+    ports:
+      - "7860:7860"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all

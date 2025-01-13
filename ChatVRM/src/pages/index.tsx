@@ -72,13 +72,16 @@ export default function Home() {
   const handleSpeakAi = useCallback(
     async (
       screenplay: Screenplay,
+      audio_buffer: ArrayBuffer,
       onStart?: () => void,
       onEnd?: () => void
     ) => {
-      speakCharacter(screenplay, viewer, koeiromapKey, onStart, onEnd);
+      speakCharacter(screenplay,audio_buffer, viewer, koeiromapKey, onStart, onEnd);
     },
     [viewer, koeiromapKey]
   );
+
+  
 
   /**
    * 与助手进行对话
@@ -177,9 +180,9 @@ export default function Home() {
             const currentAssistantMessage = sentences.join(" ");
             console.log("当前助手的消息:", currentAssistantMessage); // 输出当前助手的消息
 
-            handleSpeakAi(aiTalks[0], () => {
-              setAssistantMessage(currentAssistantMessage);
-            });
+            // handleSpeakAi(aiTalks[0], () => {
+            //   setAssistantMessage(currentAssistantMessage);
+            // });
           }
         }
       } catch (e) {
@@ -203,6 +206,55 @@ export default function Home() {
   );
 
   /**
+   * 与助手进行对话
+   */
+  const handleSendChat_test = useCallback(
+    async (tag: string,text: string,audio_buffer: ArrayBuffer) => {
+      
+      try {
+        
+          console.log("接收到的数据块:", tag,text); // 输出当前接收到的数据块
+          const aiText = `[${tag}] ${text}`;
+          const aiTalks = textsToScreenplay([aiText], koeiroParam);
+          console.log("生成的AI文本:", aiText); // 输出生成的 AI 文本
+
+          handleSpeakAi(aiTalks[0], audio_buffer,() =>{
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              const startMessage = {
+                type: "start_play",
+                content: text,
+              };
+              wsRef.current.send(JSON.stringify(startMessage));
+              console.log("发送开始播放信号:", startMessage);
+            } else {
+              console.warn("WebSocket 未连接，无法发送开始播放信号。");
+            }
+
+          }, () => {
+            // 播放完成后的回调
+            // 检查 WebSocket 是否存在且已打开
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              const completionMessage = {
+                type: "playback_complete",
+                content: "语音播放已完成",
+              };
+              wsRef.current.send(JSON.stringify(completionMessage));
+              console.log("发送播放完成信号:", completionMessage);
+            } else {
+              console.warn("WebSocket 未连接，无法发送播放完成信号。");
+            }
+          });
+      } catch (e) {
+        setChatProcessing(false);
+        console.error("语音处理过程中出错:", e); // 输出错误信息
+      } 
+      setChatProcessing(false);
+    },
+    [systemPrompt, chatLog, handleSpeakAi, openAiKey, koeiroParam]
+  );
+
+
+  /**
    * 建立WebSocket连接并处理自动重连
    */
   useEffect(() => {
@@ -223,11 +275,11 @@ export default function Home() {
         reconnectAttemptsRef.current = 0;
       };
 
-      ws.onmessage = (event) => {
+      ws.onmessage = async (event) => {
         if (typeof event.data === "string") {
           try {
             const message = JSON.parse(event.data);
-            const { type, content, data } = message;
+            const { type, content, data ,tag} = message;
 
             switch (type) {
               case "user_input":
@@ -248,15 +300,13 @@ export default function Home() {
                 //   ...prevChatLog,
                 //   { role: "assistant", content },
                 // ]);
-                setAssistantMessage(content);
+                // setAssistantMessage(content);
                 if (data) {
                   // 假设音频数据是base64编码的字符串
                   const audioBlob = base64ToBlob(data, "audio/mp3");
-                  const audioUrl = URL.createObjectURL(audioBlob);
-                  const audio = new Audio(audioUrl);
-                  audio.play().catch((error) =>
-                    console.error("音频播放失败:", error)
-                  );
+                  // 转换为arraybuffer
+                  const audioBuffer = await audioBlob.arrayBuffer();
+                  handleSendChat_test(tag,content , audioBuffer);
                 }
                 break;
               default:
@@ -340,7 +390,7 @@ export default function Home() {
       <VrmViewer />
       {/* 移除MessageInputContainer，因为我们使用WebSocket来接收输入 */}
       <Menu
-        openAiKey={openAiKey}
+        openAiKey={openAiKey} 
         systemPrompt={systemPrompt}
         chatLog={chatLog}
         koeiroParam={koeiroParam}
@@ -354,7 +404,7 @@ export default function Home() {
         handleClickResetSystemPrompt={() => setSystemPrompt(SYSTEM_PROMPT)}
         onChangeKoeiromapKey={setKoeiromapKey}
       />
-      <GitHubLink />
+      {/* <GitHubLink /> */}
     </div>
   );
 }

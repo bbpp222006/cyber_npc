@@ -89,6 +89,7 @@ export class Viewer {
     this._renderer.outputEncoding = THREE.sRGBEncoding;
     this._renderer.setSize(width, height);
     this._renderer.setPixelRatio(window.devicePixelRatio);
+    this._renderer.setClearColor(0x000000, 0); // 设置清除颜色为透明
 
     // camera
     this._camera = new THREE.PerspectiveCamera(20.0, width / height, 0.1, 20.0);

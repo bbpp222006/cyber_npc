@@ -3,7 +3,7 @@ import { Html, Head, Main, NextScript } from "next/document";
 
 export default function Document() {
   return (
-    <Html lang="ja">
+    <Html lang="zh">
       <Head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -16,10 +16,11 @@ export default function Document() {
           rel="stylesheet"
         />
       </Head>
-      <body style={{ backgroundImage: `url(${buildUrl("/bg-c.png")})` }}>
+      <body>
         <Main />
         <NextScript />
       </body>
     </Html>
   );
 }
+

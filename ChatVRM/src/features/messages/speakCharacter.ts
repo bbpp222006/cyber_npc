@@ -11,6 +11,7 @@ const createSpeakCharacter = () => {
 
   return (
     screenplay: Screenplay,
+    audioBuffer: ArrayBuffer,
     viewer: Viewer,
     koeiroApiKey: string,
     onStart?: () => void,
@@ -22,9 +23,10 @@ const createSpeakCharacter = () => {
         await wait(1000 - (now - lastTime));
       }
 
-      const buffer = await fetchAudio(screenplay.talk, koeiroApiKey).catch(
-        () => null
-      );
+      // const buffer = await fetchAudio(screenplay.talk, koeiroApiKey).catch(
+      //   () => null
+      // );
+      const buffer = audioBuffer;
       lastTime = Date.now();
       return buffer;
     });

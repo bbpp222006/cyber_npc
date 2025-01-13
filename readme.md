@@ -24,11 +24,17 @@ uvicorn app:app --reload --host "0.0.0.0"
 
 ## 配置
 
+### live2d
+
 设置模型：修改 `app.py`中的 `model_name = "haru"`
 
 模型放置于 `static/models`文件夹下
 
 注意：表情文件必须放置于 `static/models/{model_name}/expression`文件夹下
+
+### vrm3d
+
+todo
 
 ## todo
 
@@ -44,12 +50,12 @@ uvicorn app:app --reload --host "0.0.0.0"
   * [ ] 设置动作
   * [ ] 动作完成回调
 
-* [ ] VRM模型驱动
-  * [ ] 模型展示
-  * [ ] vrm模型格式解析
-  * [ ] 嘴型音频驱动
-  * [ ] 获取动作类型
-  * [ ] 设置动作
+* [x] VRM模型驱动
+  * [x] 模型展示
+  * [x] vrm模型格式解析
+  * [x] 嘴型音频驱动
+  * [x] 获取动作类型
+  * [x] 设置动作
 
 
 * [ ] 前端相关

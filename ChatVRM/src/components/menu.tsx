@@ -100,32 +100,7 @@ export const Menu = ({
 
   return (
     <>
-      <div className="absolute z-10 m-24">
-        <div className="grid grid-flow-col gap-[8px]">
-          <IconButton
-            iconName="24/Menu"
-            label="設定"
-            isProcessing={false}
-            onClick={() => setShowSettings(true)}
-          ></IconButton>
-          {showChatLog ? (
-            <IconButton
-              iconName="24/CommentOutline"
-              label="会話ログ"
-              isProcessing={false}
-              onClick={() => setShowChatLog(false)}
-            />
-          ) : (
-            <IconButton
-              iconName="24/CommentFill"
-              label="会話ログ"
-              isProcessing={false}
-              disabled={chatLog.length <= 0}
-              onClick={() => setShowChatLog(true)}
-            />
-          )}
-        </div>
-      </div>
+      
       {showChatLog && <ChatLog messages={chatLog} />}
       {showSettings && (
         <Settings
