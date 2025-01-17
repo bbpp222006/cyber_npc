@@ -1,5 +1,6 @@
 import io
 from pathlib import Path
+from typing import Optional
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 # from fastapi_standalone_docs import StandaloneDocs
@@ -30,40 +31,50 @@ app.add_middleware(
 class TTSRequest(BaseModel):
     text: str
     streaming: bool = False
+    character: Optional[str] = None
 # 定义请求模型
 @app.post("/tts/")
-async def tts(req_test: TTSRequest, streaming: bool = False, character: str = "wx"):
+async def tts(req: TTSRequest):
     # Perform TTS
     engine = model_manager.tts_inference_engine
-    if character == "wx":
-        ref_texts = ["路基智能设计子系统：以数据为核心，模型为承载，实现了支挡结构、排水工程、边坡防护、基床填挖方及地基处理的参数化设计和模型联动更新。软件已成功应用于长沙至浏阳市域(郊)铁路、台州市域S2线，深汕铁路的BIM建模项目。相比于Revit、Bently的传统方法，本系统提高了路基三维设计效率约10倍以上。"]
-        ref_audios = ["data/wx.wav"]
-    if character == "dz":
-        ref_texts = ["阿爸阿妈已经把中午饭准备好了。",
-                    "讲我和动物朋友们的故事。",
-                    "在山里我能听到各种各样的叫声。",
-                    "这是礼堂的环保。",
-                    "这是猞猁。"
-                    ]
-        ref_audios = ["data/阿爸阿妈已经把中午饭准备好了。.mp3",
-                    "data/讲我和动物朋友们的故事。.mp3",
-                    "data/在山里我能听到各种各样的叫声。.mp3",
-                    "data/这是礼堂的环保。.mp3",
-                    "data/这是猞猁。.mp3"
-                    ]
 
-    byte_audios = [audio_to_bytes(ref_audio) for ref_audio in ref_audios]
-    # print(byte_audios)
-    references = [
-            ServeReferenceAudio(
-                audio=ref_audio if ref_audio is not None else b"", text=ref_text
-            )
-            for ref_text, ref_audio in zip(ref_texts, byte_audios)
-        ]
+    if req.character == None:
+        references=[]
+    else:
+        
+        if req.character == "wx":
+            ref_texts = ["路基智能设计子系统：以数据为核心，模型为承载，实现了支挡结构、排水工程、边坡防护、基床填挖方及地基处理的参数化设计和模型联动更新。软件已成功应用于长沙至浏阳市域(郊)铁路、台州市域S2线，深汕铁路的BIM建模项目。相比于Revit、Bently的传统方法，本系统提高了路基三维设计效率约10倍以上。"]
+            ref_audios = ["data/wx.wav"]
+        if req.character == "dz":
+            ref_texts = ["阿爸阿妈已经把中午饭准备好了。",
+                        "讲我和动物朋友们的故事。",
+                        "在山里我能听到各种各样的叫声。",
+                        "这是礼堂的环保。",
+                        "这是猞猁。"
+                        ]
+            ref_audios = ["data/阿爸阿妈已经把中午饭准备好了。.mp3",
+                        "data/讲我和动物朋友们的故事。.mp3",
+                        "data/在山里我能听到各种各样的叫声。.mp3",
+                        "data/这是礼堂的环保。.mp3",
+                        "data/这是猞猁。.mp3"
+                        ]
+        if req.character == "1":
+            ref_texts = ["Hello, how are you? 这是一段测试文本。こんにちは、お元気ですか？。今天的日期是2025年1月7日。有些鸟儿注定是关不住的，它们的每一片羽毛上，都闪烁的自由的光辉！"
+                        ]
+            ref_audios = ["data/1_1.mp3"]
+
+        byte_audios = [audio_to_bytes(ref_audio) for ref_audio in ref_audios]
+        # print(byte_audios)
+        references = [
+                ServeReferenceAudio(
+                    audio=ref_audio if ref_audio is not None else b"", text=ref_text
+                )
+                for ref_text, ref_audio in zip(ref_texts, byte_audios)
+            ]
     # print(references)
 
     req = ServeTTSRequest(
-        text=req_test.text,
+        text=req.text,
         chunk_length= 200,
         format="wav",
         references=references,
@@ -71,7 +82,7 @@ async def tts(req_test: TTSRequest, streaming: bool = False, character: str = "w
         seed=None,
         use_memory_cache="on",
         normalize=True,
-        streaming=req_test.streaming,
+        streaming=req.streaming,
         max_new_tokens=1024,
         top_p=0.7,
         repetition_penalty=1.2,

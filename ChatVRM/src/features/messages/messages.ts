@@ -31,7 +31,7 @@ type EmotionType = (typeof emotions)[number] & VRMExpressionPresetName;
  * 発話文と音声の感情と、モデルの感情表現がセットになった物
  */
 export type Screenplay = {
-  expression: EmotionType;
+  // expression: EmotionType;
   talk: Talk;
 };
 
@@ -62,7 +62,7 @@ export const textsToScreenplay = (
     }
 
     screenplays.push({
-      expression: expression as EmotionType,
+      // expression: expression as EmotionType,
       talk: {
         style: emotionToTalkStyle(expression as EmotionType),
         speakerX: koeiroParam.speakerX,

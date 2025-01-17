@@ -10,7 +10,7 @@ const createSpeakCharacter = () => {
   let prevSpeakPromise: Promise<unknown> = Promise.resolve();
 
   return (
-    screenplay: Screenplay,
+    // screenplay: Screenplay,
     audioBuffer: ArrayBuffer,
     viewer: Viewer,
     koeiroApiKey: string,
@@ -38,7 +38,7 @@ const createSpeakCharacter = () => {
         if (!audioBuffer) {
           return;
         }
-        return viewer.model?.speak(audioBuffer, screenplay);
+        return viewer.model?.speak(audioBuffer);
       }
     );
     prevSpeakPromise.then(() => {

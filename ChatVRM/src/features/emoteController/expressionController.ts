@@ -33,6 +33,7 @@ export class ExpressionController {
   }
 
   public playEmotion(preset: VRMExpressionPresetName) {
+    console.log("playEmotion", preset);
     if (this._currentEmotion != "neutral") {
       this._expressionManager?.setValue(this._currentEmotion, 0);
     }

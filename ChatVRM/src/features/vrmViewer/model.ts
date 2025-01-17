@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { VRM, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
+import { VRM, VRMExpressionPresetName, VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { VRMAnimation } from "../../lib/VRMAnimation/VRMAnimation";
 import { VRMLookAtSmootherLoaderPlugin } from "@/lib/VRMLookAtSmootherLoaderPlugin/VRMLookAtSmootherLoaderPlugin";
@@ -69,13 +69,18 @@ export class Model {
   /**
    * 音声を再生し、リップシンクを行う
    */
-  public async speak(buffer: ArrayBuffer, screenplay: Screenplay) {
-    this.emoteController?.playEmotion(screenplay.expression);
+  public async speak(buffer: ArrayBuffer) {
+    // this.emoteController?.playEmotion(screenplay.expression);
     await new Promise((resolve) => {
       this._lipSync?.playFromArrayBuffer(buffer, () => {
         resolve(true);
       });
     });
+  }
+
+  public async play_emotion(expression: VRMExpressionPresetName) {
+    this.emoteController?.playEmotion(expression);
+    
   }
 
   public update(delta: number): void {

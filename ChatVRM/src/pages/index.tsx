@@ -14,6 +14,7 @@ import { Introduction } from "@/components/introduction";
 import { Menu } from "@/components/menu";
 import { GitHubLink } from "@/components/githubLink";
 import { Meta } from "@/components/meta";
+import { VRMExpressionPresetName } from "@pixiv/three-vrm";
 
 export default function Home() {
   const { viewer } = useContext(ViewerContext);
@@ -71,12 +72,12 @@ export default function Home() {
    */
   const handleSpeakAi = useCallback(
     async (
-      screenplay: Screenplay,
+      // screenplay: Screenplay,
       audio_buffer: ArrayBuffer,
       onStart?: () => void,
       onEnd?: () => void
     ) => {
-      speakCharacter(screenplay,audio_buffer, viewer, koeiromapKey, onStart, onEnd);
+      speakCharacter(audio_buffer, viewer, koeiromapKey, onStart, onEnd);
     },
     [viewer, koeiromapKey]
   );
@@ -205,31 +206,24 @@ export default function Home() {
     [systemPrompt, chatLog, handleSpeakAi, openAiKey, koeiroParam]
   );
 
+  const emotions = ["neutral", "happy", "angry", "sad", "relaxed"] as const;
+  type EmotionType =  VRMExpressionPresetName;
   /**
    * 与助手进行对话
    */
   const handleSendChat_test = useCallback(
-    async (tag: string,text: string,audio_buffer: ArrayBuffer) => {
+    async (tag: EmotionType,text: string,audio_buffer: ArrayBuffer) => {
       
       try {
         
           console.log("接收到的数据块:", tag,text); // 输出当前接收到的数据块
-          const aiText = `[${tag}] ${text}`;
-          const aiTalks = textsToScreenplay([aiText], koeiroParam);
-          console.log("生成的AI文本:", aiText); // 输出生成的 AI 文本
+          // const aiText = `[${tag}] ${text}`;
+          // const aiTalks = textsToScreenplay([aiText], koeiroParam);
+          // console.log("生成的AI文本:", aiText); // 输出生成的 AI 文本
 
-          handleSpeakAi(aiTalks[0], audio_buffer,() =>{
-            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-              const startMessage = {
-                type: "start_play",
-                content: text,
-              };
-              wsRef.current.send(JSON.stringify(startMessage));
-              console.log("发送开始播放信号:", startMessage);
-            } else {
-              console.warn("WebSocket 未连接，无法发送开始播放信号。");
-            }
-
+          handleSpeakAi(audio_buffer,() =>{
+            console.log("tag",tag);
+            viewer.model?.emoteController?.playEmotion(tag);
           }, () => {
             // 播放完成后的回调
             // 检查 WebSocket 是否存在且已打开
@@ -306,7 +300,8 @@ export default function Home() {
                   const audioBlob = base64ToBlob(data, "audio/mp3");
                   // 转换为arraybuffer
                   const audioBuffer = await audioBlob.arrayBuffer();
-                  handleSendChat_test(tag,content , audioBuffer);
+                  
+                  handleSendChat_test(tag,content, audioBuffer);
                 }
                 break;
               default:
